@@ -3,7 +3,7 @@
   <head>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
-  <?!= include('leaflet-search.css') ?>  
+  <link rel="stylesheet" href="leaflet-search.css" />  
   <style>
   #mapid { height: 670px; 
          }
@@ -50,20 +50,20 @@
  <script src="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
  <script type="text/javascript" src="https://stamen-maps.a.ssl.fastly.net/js/tile.stamen.js"></script>
  <script src="https://d3js.org/topojson.v1.min.js"></script>
- <?!= include('leaflet-search.js') ?>  
+ <script src="leaflet-search.js"></script>  
   
 </head>
  <body>
  
-  <div id="title" class='MainTitle'>Growth in Stamp Duty receipts 2014-15 v 2015-16</div>
+  <div id="title" class='MainTitle'>Average Tax Credit entitlement for all families during 2015-16</div>
   <div id="mapid"></div> 
   
 <script>
 
    // User Parameters (...You can change these...)
-   var legend0 = -1, legend1 = 0, legend2 = 0.1, legend3 = 0.15, legend4 = 0.2, legend5 = 0.25; // Must be 6 ranges
-   var legend_prefix = ' ';
-   var stat_name = 'Change in Stamp Duty receipts';    // This will be displayed on the map  
+   var legend0 = 5000, legend1 = 6000, legend2 = 6200, legend3 = 6400, legend4 = 6600, legend5 = 7000; // Must be 6 ranges
+   var legend_prefix = '£';
+   var stat_name = 'Average Tax Credit entitlement';    // This will be displayed on the map  
    var colour_scheme = 'R2G';                             // Either: 'Purple', 'Red', Blue, 'Green', 'Orange', 'R2G'
   
    // Boundaries data source
@@ -103,14 +103,13 @@
   
   
   
-  // Use data from Google Sheet
-  google.script.run.withSuccessHandler(wrapper).extractSheetAsJson();
-  function wrapper(data) {
+  //Load CSV Data function
+  var csvurl = "https://raw.githubusercontent.com/kierandriscoll/maps/master/data/TaxCredits-Geo201516-Table2.csv";
+  d3.csv(csvurl, function(data) {
   
   // Loop through imported data and populate lookup table with the values to be displayed 
   var mapLookup = d3.map();
-  data.forEach( function(d) {  mapLookup.set(d.onscode, +d.growth); });
-
+  data.forEach( function(d) {  mapLookup.set(d.onscode, +d.Av_annual_entitlement_all_families); });
 
   // Imports boundary data and draws the boundaries on the map
   $.getJSON(lagb).done(addTopoData);
@@ -198,10 +197,10 @@
   
 
    // Calculate summary statistics
-   let maxArea = data.reduce((max, area) => max.growth > area.growth ? max : area);
-   let minArea = data.reduce((min, area) => min.growth < area.growth ? min : area);
-   console.log("The area with the highest growth was " + maxArea.onscode + " " + maxArea.growth);
-   console.log("The area with the lowest growth was " + minArea.onscode + " " + minArea.growth);
+   let maxArea = data.reduce((max, area) => max.Av_annual_entitlement_all_families > area.Av_annual_entitlement_all_families ? max : area);
+   let minArea = data.reduce((min, area) => min.Av_annual_entitlement_all_families < area.Av_annual_entitlement_all_families ? min : area);
+   console.log("The area with the highest average entitlement was " + maxArea.onscode + " " + maxArea.Av_annual_entitlement_all_families);
+   console.log("The area with the lowest average entitlement was " + minArea.onscode + " " + minArea.Av_annual_entitlement_all_families);
     
  } //End of wrapper function 
 
