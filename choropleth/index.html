@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
+  <?!= include('leaflet-search.css') ?>  
+  <style>
+  #mapid { height: 670px; 
+         }
+  
+  .MainTitle {
+     font: 22px Helvetica, sans-serif;
+     color: white;
+     font-weight: bold;
+     text-align: center;
+     opacity: 0.9;
+     background-color: teal;
+     padding: 4px;
+  }    
+     
+  .info {
+    padding: 6px 8px;
+    font: 14px/16px Helvetica, sans-serif;
+    font-weight: bold;
+    background: rgba(255,255,255,0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+  }
+
+  .cssTooltip {
+  font-size: 14px;
+  font-weight: bold;
+  }
+
+  .legend {
+    line-height: 18px;
+    color: #000;
+}
+.legend i {
+    width: 16px;
+    height: 16px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+  </style>
+
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+ <script src="https://d3js.org/d3.v3.min.js"></script>
+ <script src="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
+ <script type="text/javascript" src="https://stamen-maps.a.ssl.fastly.net/js/tile.stamen.js"></script>
+ <script src="https://d3js.org/topojson.v1.min.js"></script>
+ <?!= include('leaflet-search.js') ?>  
+  
+</head>
+ <body>
+ 
+  <div id="title" class='MainTitle'>Growth in Stamp Duty receipts 2014-15 v 2015-16</div>
+  <div id="mapid"></div> 
+  
+<script>
+
+   // User Parameters (...You can change these...)
+   var legend0 = -1, legend1 = 0, legend2 = 0.1, legend3 = 0.15, legend4 = 0.2, legend5 = 0.25; // Must be 6 ranges
+   var legend_prefix = ' ';
+   var stat_name = 'Change in Stamp Duty receipts';    // This will be displayed on the map  
+   var colour_scheme = 'R2G';                             // Either: 'Purple', 'Red', Blue, 'Green', 'Orange', 'R2G'
+  
+   // Boundaries data source
+   var lagb = 'https://raw.githubusercontent.com/kierandriscoll/UK-Topojson/master/Local-Authorities/Local_Auths_Dec16_Gen_Clip_UK.json';
+
+   var fmt = d3.format('.0%');  // Formats percentages with % and 0dp
+  
+   // Define Map area/position and any background tiles 
+   var map = new L.Map('mapid', { center: new L.LatLng(53.10, -1.26),zoom: 7   });
+   var layer = new L.StamenTileLayer("terrain");
+   map.addLayer(layer); // Optional : add Tile Layer to map
+   
+  
+      
+   //Code to convert TopoJson to GeoJson
+   L.TopoJSON = L.GeoJSON.extend({  
+                  addData: function(jsonData) {    
+                           if (jsonData.type === "Topology") {
+                               for (key in jsonData.objects) {
+                                    geojson = topojson.feature(jsonData, jsonData.objects[key]);
+                                    L.GeoJSON.prototype.addData.call(this, geojson);
+    }}    
+                           else {
+                                    L.GeoJSON.prototype.addData.call(this, jsonData);
+    }}});
+  
+  var topoLayer = new L.TopoJSON(); /*This is an empty topoJSON layer*/
+  
+    
+  // Possible Colour Schemes 
+  var colourmatrix = {Purple: ['#dadaeb','#bcbddc','#9e9ac8','#807dba','#6a51a3','#4a1486']
+                    ,Red: ["#fcbba1", "#fc9272", "#fb6a4a", "#ef3b2c", "#cb181d", "#99000d"]
+                    ,Blue:["#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#085192", "#08306b"]
+                    ,Green:["#c7e9c0", "#a1d99b", "#74c476", "#41ab5d", "#238b45", "#005a32"]
+                    ,Orange:["#fdd0a2", "#fdae6b", "#fd8d3c", "#f16913", "#d94801", "#8c2d04"]
+                    ,R2G:["#cb181d","#fb6a4a","#fcbba1","#c7e9c0","#74c476","#238b45"]};
+  
+  
+  
+  // Use data from Google Sheet
+  google.script.run.withSuccessHandler(wrapper).extractSheetAsJson();
+  function wrapper(data) {
+  
+  // Loop through imported data and populate lookup table with the values to be displayed 
+  var mapLookup = d3.map();
+  data.forEach( function(d) {  mapLookup.set(d.onscode, +d.growth); });
+
+
+  // Imports boundary data and draws the boundaries on the map
+  $.getJSON(lagb).done(addTopoData);
+  function addTopoData(topoData) {  
+           topoLayer.addData(topoData);
+           topoLayer.addTo(map)
+           topoLayer.eachLayer(handleLayer);
+   }
+ 
+
+  // Function chooses colour based on data value (like IF..THEN..ELSE)
+  function getColor(d) {
+    return d > legend5 ? colourmatrix[colour_scheme][5] :
+           d > legend4 ? colourmatrix[colour_scheme][4] :
+           d > legend3 ? colourmatrix[colour_scheme][3] :
+           d > legend2 ? colourmatrix[colour_scheme][2] :
+           d > legend1 ? colourmatrix[colour_scheme][1] :
+           d > legend0 ? colourmatrix[colour_scheme][0] :
+                         'grey';
+  }
+
+  // Set the style of the boundary data layer & the tooltip
+  function handleLayer(layer) { 
+    layer.setStyle({ fillColor : getColor(mapLookup.get(layer.feature.properties.lad16cd)),
+                     fillOpacity: 0.8,
+                     color: 'black',
+                     weight:0.5,
+                     opacity: 1 });
+    
+    var areaname = layer.feature.properties.lad16nm; // Area Name
+    var areaid = layer.feature.properties.lad16cd;   // Area ONS code
+    layer.bindTooltip(areaname + ' <br/> ' + legend_prefix + fmt(mapLookup.get(areaid)), {className: 'cssTooltip', sticky: true, direction: 'right', offset: [5, 0] });
+    
+    layer.on({ mouseover : enterLayer,
+               mouseout: leaveLayer  });
+
+  } //End of handleLayer function
+ 
+  
+  // Behaviour when mouseover an area
+  function enterLayer(){  this.setStyle({ weight: 3, opacity: 1 }); }
+  
+  // Behaviour when mouseout an area
+  function leaveLayer(){  this.setStyle({ weight: 0.5 }); }           
+               
+  
+  // Add legend (6 ranges)
+  var legend = L.control({position: 'bottomleft'});
+  
+  legend.onAdd = function (map) { // create a div with a class "info legend"
+        var div = L.DomUtil.create('div', 'info legend'),
+            grades = [legend0, legend1, legend2, legend3, legend4, legend5],
+            labels = [];
+
+        // loop through our density intervals and generate a label with a colored square for each interval
+        for (var i = 0; i < grades.length; i++) {
+                div.innerHTML +='<i style="background:' + getColor(grades[i] + 0.001) + '"></i> ' + legend_prefix +
+                                 fmt(grades[i]) + (grades[i + 1] + 0.001 ? ' to ' + fmt(grades[i + 1]) + '<br>' : '+');
+        }
+   
+        return div;
+  };
+
+  legend.addTo(map);
+ 
+   
+  
+  // Add a Search bar to the map
+   var searchControl = new L.Control.Search({
+		layer: topoLayer,
+		propertyName: 'lad16nm',
+		marker: false,
+		moveToLocation: function(latlng, title, map) {
+			var zoom = map.getBoundsZoom(latlng.layer.getBounds()) - 1;
+           	map.setView(latlng, zoom); // access the zoom
+		}
+	});
+	
+    searchControl.on('search:locationfound', function(e) {
+		e.layer.setStyle({weight: "2", opacity: "1"});
+	});
+	
+	map.addControl( searchControl );  //inizialize search control
+  
+  
+
+   // Calculate summary statistics
+   let maxArea = data.reduce((max, area) => max.growth > area.growth ? max : area);
+   let minArea = data.reduce((min, area) => min.growth < area.growth ? min : area);
+   console.log("The area with the highest growth was " + maxArea.onscode + " " + maxArea.growth);
+   console.log("The area with the lowest growth was " + minArea.onscode + " " + minArea.growth);
+    
+ } //End of wrapper function 
+
+  </script>
+  </body>
+</html>
