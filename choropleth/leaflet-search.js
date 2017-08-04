@@ -1,4 +1,3 @@
-<script>
 /*
 	Name					Data passed			   Description
 	Managed Events:
@@ -967,4 +966,3 @@ L.control.search = function (options) {
 return L.Control.Search;
 
 });
-</script>
